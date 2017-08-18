@@ -227,6 +227,9 @@ public class SecurityService {
       case GITHUB:
         groupMembership.setGithub((GithubRoleProvider) roleProvider);
         break;
+      case LDAP:
+        groupMembership.setLdap((LdapRoleProvider) roleProvider);
+        break;
       case FILE:
         groupMembership.setFile((FileRoleProvider) roleProvider);
         break;

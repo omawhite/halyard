@@ -41,11 +41,18 @@ import com.netflix.spinnaker.halyard.cli.command.v1.config.security.authn.oauth2
 import com.netflix.spinnaker.halyard.cli.command.v1.config.security.authn.saml.EditSamlCommand
 import com.netflix.spinnaker.halyard.cli.command.v1.config.security.authn.saml.SamlCommand
 import com.netflix.spinnaker.halyard.cli.command.v1.config.security.authz.AuthzCommand
+import com.netflix.spinnaker.halyard.cli.command.v1.config.security.authz.github.EditGithubRoleProviderCommand
+import com.netflix.spinnaker.halyard.cli.command.v1.config.security.authz.github.GithubRoleProviderCommand
+import com.netflix.spinnaker.halyard.cli.command.v1.config.security.authz.google.EditGoogleRoleProviderCommand
+import com.netflix.spinnaker.halyard.cli.command.v1.config.security.authz.google.GoogleRoleProviderCommand
+import com.netflix.spinnaker.halyard.cli.command.v1.config.security.authz.ldap.EditLdapRoleProviderCommand
+import com.netflix.spinnaker.halyard.cli.command.v1.config.security.authz.ldap.LdapRoleProviderCommand
 import com.netflix.spinnaker.halyard.cli.command.v1.config.security.ui.UiSecurityCommand
 import spock.lang.Specification
 import spock.lang.Unroll
 
 import static com.netflix.spinnaker.halyard.cli.command.v1.config.security.authn.AuthnMethodEnableDisableCommandBuilder.AuthnMethodEnableDisableCommand
+import static com.netflix.spinnaker.halyard.cli.command.v1.config.security.authz.EnableDisableAuthzCommandBuilder.EnableDisableAuthzCommand
 
 class CommandTreeSpec extends Specification {
 
@@ -81,42 +88,54 @@ class CommandTreeSpec extends Specification {
     subcommands[subcommandName].class == subcommandClass
 
     where:
-    commandClass    | subcommandName  | subcommandClass
+    commandClass              | subcommandName  | subcommandClass
 
-    HalCommand      | "admin"         | AdminCommand
-    HalCommand      | "backup"        | BackupCommand
-    HalCommand      | "config"        | ConfigCommand
-    HalCommand      | "deploy"        | DeployCommand
-    HalCommand      | "task"          | TaskCommand
-    HalCommand      | "version"       | VersionCommand
+    HalCommand                | "admin"         | AdminCommand
+    HalCommand                | "backup"        | BackupCommand
+    HalCommand                | "config"        | ConfigCommand
+    HalCommand                | "deploy"        | DeployCommand
+    HalCommand                | "task"          | TaskCommand
+    HalCommand                | "version"       | VersionCommand
 
-    ConfigCommand   | "deploy"        | DeploymentEnvironmentCommand
-    ConfigCommand   | "edit"          | EditConfigCommand
-    ConfigCommand   | "features"      | FeaturesCommand
-    ConfigCommand   | "generate"      | GenerateCommand
-    ConfigCommand   | "metric-stores" | MetricStoresCommand
-    ConfigCommand   | "storage"       | PersistentStorageCommand
-    ConfigCommand   | "provider"      | ProviderCommand
-    ConfigCommand   | "security"      | SecurityCommand
-    ConfigCommand   | "version"       | VersionConfigCommand
-    ConfigCommand   | "ci"            | CiCommand
+    ConfigCommand             | "deploy"        | DeploymentEnvironmentCommand
+    ConfigCommand             | "edit"          | EditConfigCommand
+    ConfigCommand             | "features"      | FeaturesCommand
+    ConfigCommand             | "generate"      | GenerateCommand
+    ConfigCommand             | "metric-stores" | MetricStoresCommand
+    ConfigCommand             | "storage"       | PersistentStorageCommand
+    ConfigCommand             | "provider"      | ProviderCommand
+    ConfigCommand             | "security"      | SecurityCommand
+    ConfigCommand             | "version"       | VersionConfigCommand
+    ConfigCommand             | "ci"            | CiCommand
 
-    SecurityCommand | "api"           | ApiSecurityCommand
-    SecurityCommand | "authn"         | AuthnCommand
-    SecurityCommand | "authz"         | AuthzCommand
-    SecurityCommand | "ui"            | UiSecurityCommand
+    SecurityCommand           | "api"           | ApiSecurityCommand
+    SecurityCommand           | "authn"         | AuthnCommand
+    SecurityCommand           | "authz"         | AuthzCommand
+    SecurityCommand           | "ui"            | UiSecurityCommand
 
-    AuthnCommand    | "oauth2"        | OAuth2Command
-    AuthnCommand    | "saml"          | SamlCommand
-//  AuthnCommand    | "ldap"          | LdapCommand // coming very soon
+    AuthnCommand              | "oauth2"        | OAuth2Command
+    AuthnCommand              | "saml"          | SamlCommand
+//  AuthnCommand            | "ldap"          | LdapCommand // coming very soon
 
-    OAuth2Command   | "disable"       | AuthnMethodEnableDisableCommand
-    OAuth2Command   | "enable"        | AuthnMethodEnableDisableCommand
-    OAuth2Command   | "edit"          | EditOAuth2Command
+    OAuth2Command             | "disable"       | AuthnMethodEnableDisableCommand
+    OAuth2Command             | "enable"        | AuthnMethodEnableDisableCommand
+    OAuth2Command             | "edit"          | EditOAuth2Command
 
-    SamlCommand     | "disable"       | AuthnMethodEnableDisableCommand
-    SamlCommand     | "enable"        | AuthnMethodEnableDisableCommand
-    SamlCommand     | "edit"          | EditSamlCommand
+    SamlCommand               | "disable"       | AuthnMethodEnableDisableCommand
+    SamlCommand               | "enable"        | AuthnMethodEnableDisableCommand
+    SamlCommand               | "edit"          | EditSamlCommand
+
+    AuthzCommand              | "disable"       | EnableDisableAuthzCommand
+    AuthzCommand              | "enable"        | EnableDisableAuthzCommand
+    AuthzCommand              | "github"        | GithubRoleProviderCommand
+    AuthzCommand              | "google"        | GoogleRoleProviderCommand
+    AuthzCommand              | "ldap"          | LdapRoleProviderCommand
+
+    GithubRoleProviderCommand | "edit"          | EditGithubRoleProviderCommand
+
+    GoogleRoleProviderCommand | "edit"          | EditGoogleRoleProviderCommand
+
+    LdapRoleProviderCommand   | "edit"          | EditLdapRoleProviderCommand
   }
 
 }

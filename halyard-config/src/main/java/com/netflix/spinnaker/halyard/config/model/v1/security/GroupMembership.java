@@ -39,6 +39,7 @@ public class GroupMembership extends Node {
   private RoleProviderType service = RoleProviderType.EXTERNAL;
   private GoogleRoleProvider google = new GoogleRoleProvider();
   private GithubRoleProvider github = new GithubRoleProvider();
+  private LdapRoleProvider ldap = new LdapRoleProvider();
   private FileRoleProvider file = new FileRoleProvider();
 
   @Override

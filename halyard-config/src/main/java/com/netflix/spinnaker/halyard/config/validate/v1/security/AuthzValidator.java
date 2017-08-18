@@ -34,6 +34,8 @@ public class AuthzValidator extends Validator<Authz> {
 
   FileRoleProviderValidator fileValidator = new FileRoleProviderValidator();
 
+  LdapRoleProviderValidator ldapValidator = new LdapRoleProviderValidator();
+
   @Override
   public void validate(ConfigProblemSetBuilder p, Authz z) {
     if (!z.isEnabled()) {
@@ -46,6 +48,9 @@ public class AuthzValidator extends Validator<Authz> {
         break;
       case GOOGLE:
         googleValidator.validate(p, z.getGroupMembership().getGoogle());
+        break;
+      case LDAP:
+        ldapValidator.validate(p, z.getGroupMembership().getLdap());
         break;
       case FILE:
         fileValidator.validate(p, z.getGroupMembership().getFile());
