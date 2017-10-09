@@ -17,10 +17,12 @@
 
 package com.netflix.spinnaker.halyard.deploy.spinnaker.v1.service.distributed.kubernetes;
 
+import com.amazonaws.services.dynamodbv2.xspec.M;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.frigga.Names;
 import com.netflix.spinnaker.clouddriver.kubernetes.deploy.KubernetesUtil;
+import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.KubernetesAtomicOperationDescription;
 import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.loadbalancer.KubernetesLoadBalancerDescription;
 import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.loadbalancer.KubernetesNamedServicePort;
 import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.*;
@@ -321,13 +323,13 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
 
     List<KubernetesContainerDescription> containers = new ArrayList<>();
     ServiceSettings serviceSettings = runtimeSettings.getServiceSettings(getService());
-    KubernetesContainerDescription container = buildContainer(name, serviceSettings, configSources, deploymentEnvironment);
+    KubernetesContainerDescription container = buildContainer(name, serviceSettings, configSources, deploymentEnvironment, description );
     containers.add(container);
 
     ServiceSettings monitoringSettings = runtimeSettings.getServiceSettings(monitoringService);
     if (monitoringSettings.getEnabled() && serviceSettings.getMonitored()) {
       serviceSettings = runtimeSettings.getServiceSettings(monitoringService);
-      container = buildContainer(monitoringService.getServiceName(), serviceSettings, configSources, deploymentEnvironment);
+      container = buildContainer(monitoringService.getServiceName(), serviceSettings, configSources, deploymentEnvironment, description );
       containers.add(container);
     }
 
@@ -336,7 +338,7 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
     return getObjectMapper().convertValue(description, new TypeReference<Map<String, Object>>() { });
   }
 
-  default KubernetesContainerDescription buildContainer(String name, ServiceSettings settings, List<ConfigSource> configSources, DeploymentEnvironment deploymentEnvironment) {
+  default KubernetesContainerDescription buildContainer(String name, ServiceSettings settings, List<ConfigSource> configSources, DeploymentEnvironment deploymentEnvironment, DeployKubernetesAtomicOperationDescription description) {
     KubernetesContainerDescription container = new KubernetesContainerDescription();
     KubernetesProbe readinessProbe = new KubernetesProbe();
     KubernetesHandler handler = new KubernetesHandler();
@@ -359,7 +361,7 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
     readinessProbe.setHandler(handler);
     container.setReadinessProbe(readinessProbe);
 
-    applyCustomSize(container, deploymentEnvironment, name);
+    applyCustomSize(container, deploymentEnvironment, name, description);
 
     KubernetesImageDescription imageDescription = KubernetesUtil.buildImageDescription(settings.getArtifactId());
     container.setImageDescription(imageDescription);
@@ -405,8 +407,9 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
     return container;
   }
 
-  default void applyCustomSize(KubernetesContainerDescription container, DeploymentEnvironment deploymentEnvironment, String componentName) {
-    Map<String, Map> componentSizing = deploymentEnvironment.getCustomSizing().get(componentName);
+  default void applyCustomSize(KubernetesContainerDescription container, DeploymentEnvironment deploymentEnvironment, String componentName, DeployKubernetesAtomicOperationDescription description) {
+    Map componentSizing = deploymentEnvironment.getCustomSizing().get(componentName);
+//    Integer targetSize = (Integer) deploymentEnvironment.getCustomSizing().get(componentName).get("replicas");
 
     if (componentSizing != null) {
 
@@ -416,6 +419,11 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
 
       if (componentSizing.get("limits") != null) {
         container.setLimits(retrieveKubernetesResourceDescription(componentSizing, "limits"));
+      }
+
+//      TODO check if replicas is specified, if so change the DeployDescription.targetSize.....
+      if (componentSizing.get("replicas") !=null) {
+        description.setTargetSize(retrieveKuberenetesTargetSize(componentSizing));
       }
     }
 
@@ -429,6 +437,12 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
     requests.setCpu(stringOrNull(componentSizing.get(resourceType).get("cpu")));
     requests.setMemory(stringOrNull(componentSizing.get(resourceType).get("memory")));
     return requests;
+  }
+
+  default Integer retrieveKuberenetesTargetSize(Map componentSizing){
+    Integer targetSize;
+    targetSize = (Integer) componentSizing.get("replicas");
+    return targetSize;
   }
 
   // This is super-goofy. What can we do differently for this? Anything in the config parsing logic?
@@ -506,6 +520,7 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
     }).collect(Collectors.toList());
     ReplicaSetBuilder replicaSetBuilder = new ReplicaSetBuilder();
 
+//    TODO grab the specfied replicas and add the to the .withReplicas part of ReplicaSet Builder
     replicaSetBuilder = replicaSetBuilder
         .withNewMetadata()
         .withName(replicaSetName)

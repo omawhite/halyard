@@ -17,8 +17,8 @@
 package com.netflix.spinnaker.halyard.deploy.spinnaker.v1.service.distributed.kubernetes
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.DeployKubernetesAtomicOperationDescription
 import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.KubernetesContainerDescription
-import com.netflix.spinnaker.halyard.config.model.v1.node.CustomSizing
 import com.netflix.spinnaker.halyard.config.model.v1.node.DeploymentConfiguration
 import com.netflix.spinnaker.halyard.config.model.v1.node.DeploymentEnvironment
 import com.netflix.spinnaker.halyard.deploy.deployment.v1.AccountDeploymentDetails
@@ -42,10 +42,11 @@ class KubernetesDistributedServiceSpec extends Specification {
         KubernetesContainerDescription container = new KubernetesContainerDescription()
         def service = createServiceTestDouble()
         def deploymentEnvironment = new DeploymentEnvironment()
+        def kubernetesDescription = new DeployKubernetesAtomicOperationDescription()
         deploymentEnvironment.customSizing["echo"] = new HashMap<>(requests: requests, limits: limits)
 
         when:
-        service.applyCustomSize(container, deploymentEnvironment, "echo")
+        service.applyCustomSize(container, deploymentEnvironment, "echo", kubernetesDescription)
 
         then:
         container.requests?.memory == requestsMemory
@@ -68,9 +69,10 @@ class KubernetesDistributedServiceSpec extends Specification {
         KubernetesContainerDescription container = new KubernetesContainerDescription()
         def service = createServiceTestDouble()
         def deploymentEnvironment = new DeploymentEnvironment()
+        def kubernetesDescription = new DeployKubernetesAtomicOperationDescription()
 
         when:
-        service.applyCustomSize(container, deploymentEnvironment, "echo")
+        service.applyCustomSize(container, deploymentEnvironment, "echo", kubernetesDescription)
 
         then:
         container.requests == null
@@ -84,14 +86,39 @@ class KubernetesDistributedServiceSpec extends Specification {
         def requests = new HashMap<>(memory: "1Mi", cpu: "1m")
         def limits = new HashMap<>(memory: "50Mi", cpu: "50m")
         def deploymentEnvironment = new DeploymentEnvironment()
+        def kubernetesDescription = new DeployKubernetesAtomicOperationDescription()
         deploymentEnvironment.customSizing["echo"] = new HashMap<>(requests: requests, limits: limits)
 
         when:
-        service.applyCustomSize(container, deploymentEnvironment, null)
+        service.applyCustomSize(container, deploymentEnvironment, null, kubernetesDescription)
 
         then:
         container.requests == null
         container.limits == null
+    }
+
+    @Unroll
+    def "applies replicaset sizes specified in customSizing"() {
+        setup:
+        KubernetesContainerDescription container = new KubernetesContainerDescription()
+        def service = createServiceTestDouble()
+        def deploymentEnvironment = new DeploymentEnvironment()
+        def kubernetesDescription = new DeployKubernetesAtomicOperationDescription()
+        deploymentEnvironment.customSizing['echo'] = new HashMap<>('replicas': replicas)
+
+        when:
+        service.applyCustomSize(container, deploymentEnvironment, "echo", kubernetesDescription)
+
+        then:
+        kubernetesDescription.getTargetSize() == replicas
+
+
+        where:
+        description                     |  replicas
+        "replica ammount not specfied"  |  null
+        "one replica specfied"          |  1
+        "multiple replicas specfied"    |  3
+
     }
 
     private KubernetesDistributedService createServiceTestDouble() {

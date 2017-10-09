@@ -128,6 +128,31 @@ deploymentConfigurations:
     out.deploymentConfigurations[0].deploymentEnvironment.customSizing['echo'].requests.cpu == '500m'
   }
 
+  void "parses replica sizings"(){
+    setup:
+    String config = """
+deploymentConfigurations:
+- deploymentEnvironment:
+    customSizing:
+      clouddriver:
+        replicas: 2
+      echo:
+        replicas: 3
+
+"""
+    InputStream stream = new ByteArrayInputStream(config.getBytes(StandardCharsets.UTF_8))
+    Halconfig out = null
+
+    when:
+    out = parser.parseHalconfig(stream)
+
+    then:
+    out.deploymentConfigurations[0].deploymentEnvironment.customSizing['clouddriver'].replicas == 2
+    out.deploymentConfigurations[0].deploymentEnvironment.customSizing['echo'].replicas == 3
+    out.deploymentConfigurations[0].deploymentEnvironment.customSizing.getComponentSizings().get("echo").get("replicas") == 3
+
+
+  }
   @Unroll("parses authn: #authnProvider:#propertyName value should be #propertyValue")
   void "parses all authn properties"() {
     setup:
