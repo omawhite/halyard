@@ -38,6 +38,7 @@ import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergro
 import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.KubernetesVolumeMount;
 import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.KubernetesVolumeSource;
 import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.KubernetesVolumeSourceType;
+import com.netflix.spinnaker.halyard.config.model.v1.node.CustomSizing;
 import com.netflix.spinnaker.halyard.config.model.v1.node.DeploymentEnvironment;
 import com.netflix.spinnaker.halyard.config.model.v1.node.Provider;
 import com.netflix.spinnaker.halyard.config.model.v1.providers.kubernetes.KubernetesAccount;
@@ -440,14 +441,9 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
 
   default KubernetesResourceDescription retrieveKubernetesResourceDescription(Map<String, Map> componentSizing, String resourceType) {
     KubernetesResourceDescription requests = new KubernetesResourceDescription();
-    requests.setCpu(stringOrNull(componentSizing.get(resourceType).get("cpu")));
-    requests.setMemory(stringOrNull(componentSizing.get(resourceType).get("memory")));
+    requests.setCpu(CustomSizing.stringOrNull(componentSizing.get(resourceType).get("cpu")));
+    requests.setMemory(CustomSizing.stringOrNull(componentSizing.get(resourceType).get("memory")));
     return requests;
-  }
-
-  // This is super-goofy. What can we do differently for this? Anything in the config parsing logic?
-  default String stringOrNull(Object value) {
-    return value != null ? String.valueOf(value) : null;
   }
 
   default void ensureRunning(

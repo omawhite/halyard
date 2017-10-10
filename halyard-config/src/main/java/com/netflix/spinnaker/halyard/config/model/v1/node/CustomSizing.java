@@ -16,7 +16,6 @@
 
 package com.netflix.spinnaker.halyard.config.model.v1.node;
 
-import com.netflix.spinnaker.halyard.config.problem.v1.ConfigProblemSetBuilder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -32,6 +31,10 @@ import java.util.Set;
 @EqualsAndHashCode(callSuper = false)
 public class CustomSizing implements Map<String, Map> {
   Map<String, Map> componentSizings = new HashMap<>();
+
+  public static String stringOrNull(Object value) {
+    return value != null ? String.valueOf(value) : null;
+  }
 
   @Override
   public int size() {
