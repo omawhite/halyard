@@ -18,10 +18,21 @@
 
 package com.netflix.spinnaker.halyard.deploy.spinnaker.v1.service.distributed.kubernetes;
 
+import com.netflix.spinnaker.halyard.config.model.v1.node.CustomSizing;
 import com.netflix.spinnaker.halyard.config.model.v1.node.DeploymentEnvironment;
 import com.netflix.spinnaker.halyard.deploy.spinnaker.v1.service.ConfigSource;
 import com.netflix.spinnaker.halyard.deploy.spinnaker.v1.service.ServiceSettings;
-import io.fabric8.kubernetes.api.model.*;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerBuilder;
+import io.fabric8.kubernetes.api.model.ContainerPortBuilder;
+import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.EnvVarBuilder;
+import io.fabric8.kubernetes.api.model.ProbeBuilder;
+import io.fabric8.kubernetes.api.model.QuantityBuilder;
+import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
+import io.fabric8.kubernetes.api.model.VolumeMount;
+import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
 
 import java.util.List;
 import java.util.Map;
@@ -87,19 +98,14 @@ class ResourceBuilder {
 
     ResourceRequirementsBuilder resourceRequirementsBuilder = new ResourceRequirementsBuilder();
     if (customSizing.get("requests") != null) {
-      resourceRequirementsBuilder.addToRequests("memory", new QuantityBuilder().withAmount(stringOrNull(customSizing.get("requests").get("memory"))).build());
-      resourceRequirementsBuilder.addToRequests("cpu", new QuantityBuilder().withAmount(stringOrNull(customSizing.get("requests").get("cpu"))).build());
+      resourceRequirementsBuilder.addToRequests("memory", new QuantityBuilder().withAmount(CustomSizing.stringOrNull(customSizing.get("requests").get("memory"))).build());
+      resourceRequirementsBuilder.addToRequests("cpu", new QuantityBuilder().withAmount(CustomSizing.stringOrNull(customSizing.get("requests").get("cpu"))).build());
     }
     if (customSizing.get("limits") != null) {
-      resourceRequirementsBuilder.addToLimits("memory", new QuantityBuilder().withAmount(stringOrNull(customSizing.get("limits").get("memory"))).build());
-      resourceRequirementsBuilder.addToLimits("cpu", new QuantityBuilder().withAmount(stringOrNull(customSizing.get("limits").get("cpu"))).build());
+      resourceRequirementsBuilder.addToLimits("memory", new QuantityBuilder().withAmount(CustomSizing.stringOrNull(customSizing.get("limits").get("memory"))).build());
+      resourceRequirementsBuilder.addToLimits("cpu", new QuantityBuilder().withAmount(CustomSizing.stringOrNull(customSizing.get("limits").get("cpu"))).build());
     }
 
     return resourceRequirementsBuilder.build();
-  }
-
-  // This is super-goofy. What can we do differently for this? Anything in the config parsing logic?
-  private static String stringOrNull(Object value) {
-    return value != null ? String.valueOf(value) : null;
   }
 }

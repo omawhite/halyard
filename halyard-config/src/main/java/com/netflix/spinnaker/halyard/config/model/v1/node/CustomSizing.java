@@ -16,7 +16,6 @@
 
 package com.netflix.spinnaker.halyard.config.model.v1.node;
 
-import com.netflix.spinnaker.halyard.config.problem.v1.ConfigProblemSetBuilder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -25,24 +24,16 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * A CustomSizing is a map of maps where you can hack in provider-specific settings related to instance/container/pod sizes.
+ */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class CustomSizing extends Node implements Map<String, Map> {
+public class CustomSizing implements Map<String, Map> {
   Map<String, Map> componentSizings = new HashMap<>();
 
-  @Override
-  public void accept(ConfigProblemSetBuilder psBuilder, Validator v) {
-  }
-
-  //TODO: Either nix these or implement them properly -Markus 2017-10-06
-  @Override
-  public String getNodeName() {
-    return null;
-  }
-
-  @Override
-  public NodeIterator getChildren() {
-    return null;
+  public static String stringOrNull(Object value) {
+    return value != null ? String.valueOf(value) : null;
   }
 
   @Override

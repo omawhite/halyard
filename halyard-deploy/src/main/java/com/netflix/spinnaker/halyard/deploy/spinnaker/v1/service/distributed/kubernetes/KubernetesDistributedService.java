@@ -25,7 +25,22 @@ import com.netflix.spinnaker.clouddriver.kubernetes.deploy.KubernetesUtil;
 import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.KubernetesAtomicOperationDescription;
 import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.loadbalancer.KubernetesLoadBalancerDescription;
 import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.loadbalancer.KubernetesNamedServicePort;
-import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.*;
+import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.DeployKubernetesAtomicOperationDescription;
+import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.KubernetesContainerDescription;
+import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.KubernetesContainerPort;
+import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.KubernetesEnvVar;
+import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.KubernetesHandler;
+import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.KubernetesHandlerType;
+import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.KubernetesHttpGetAction;
+import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.KubernetesImageDescription;
+import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.KubernetesProbe;
+import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.KubernetesResourceDescription;
+import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.KubernetesSecretVolumeSource;
+import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.KubernetesTcpSocketAction;
+import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.KubernetesVolumeMount;
+import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.KubernetesVolumeSource;
+import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.KubernetesVolumeSourceType;
+import com.netflix.spinnaker.halyard.config.model.v1.node.CustomSizing;
 import com.netflix.spinnaker.halyard.config.model.v1.node.DeploymentEnvironment;
 import com.netflix.spinnaker.halyard.config.model.v1.node.Provider;
 import com.netflix.spinnaker.halyard.config.model.v1.providers.kubernetes.KubernetesAccount;
@@ -434,8 +449,8 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
 
   default KubernetesResourceDescription retrieveKubernetesResourceDescription(Map<String, Map> componentSizing, String resourceType) {
     KubernetesResourceDescription requests = new KubernetesResourceDescription();
-    requests.setCpu(stringOrNull(componentSizing.get(resourceType).get("cpu")));
-    requests.setMemory(stringOrNull(componentSizing.get(resourceType).get("memory")));
+    requests.setCpu(CustomSizing.stringOrNull(componentSizing.get(resourceType).get("cpu")));
+    requests.setMemory(CustomSizing.stringOrNull(componentSizing.get(resourceType).get("memory")));
     return requests;
   }
 
@@ -443,11 +458,6 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
     Integer targetSize;
     targetSize = (Integer) componentSizing.get("replicas");
     return targetSize;
-  }
-
-  // This is super-goofy. What can we do differently for this? Anything in the config parsing logic?
-  default String stringOrNull(Object value) {
-    return value != null ? String.valueOf(value) : null;
   }
 
   default void ensureRunning(
