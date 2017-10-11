@@ -436,7 +436,7 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
         container.setLimits(retrieveKubernetesResourceDescription(componentSizing, "limits"));
       }
 
-//      TODO check if replicas is specified, if so change the DeployDescription.targetSize.....
+      //do something if replicas aren't specified, they should default to 1, but im not sure where that happens
       if (componentSizing.get("replicas") !=null) {
         description.setTargetSize(retrieveKuberenetesTargetSize(componentSizing));
       }
@@ -531,13 +531,14 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
     ReplicaSetBuilder replicaSetBuilder = new ReplicaSetBuilder();
 
 //    TODO grab the specfied replicas and add the to the .withReplicas part of ReplicaSet Builder
+    
     replicaSetBuilder = replicaSetBuilder
         .withNewMetadata()
         .withName(replicaSetName)
         .withNamespace(namespace)
         .endMetadata()
         .withNewSpec()
-        .withReplicas(1)
+        .withReplicas(2)
         .withNewSelector()
         .withMatchLabels(replicaSetSelector)
         .endSelector()

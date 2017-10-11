@@ -73,4 +73,17 @@ class ResourceBuilderSpec extends Specification {
         then:
         builtRequirements == null
     }
+    @Unroll
+    def "adds specfied number of replicas"(){
+        given:
+        def builder = new ResourceBuilder()
+        def deploymentEnvironment = new DeploymentEnvironment()
+        deploymentEnvironment.customSizing["echo"] = new HashMap<>(replicas: replicas)
+
+        when:
+        def builtRequirements = builder.buildResourceRequirements("echo", deploymentEnvironment)
+
+        then:
+        builder
+    }
 }

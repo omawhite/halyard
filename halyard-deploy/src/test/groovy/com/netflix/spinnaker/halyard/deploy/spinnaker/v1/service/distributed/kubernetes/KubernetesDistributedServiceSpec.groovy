@@ -115,8 +115,8 @@ class KubernetesDistributedServiceSpec extends Specification {
 
         where:
         description                     |  replicas
-        "replica ammount not specfied"  |  null
-        "one replica specfied"          |  1
+        "replica ammount not specfied"  |  1
+        "one replica specfied"          |  2
         "multiple replicas specfied"    |  3
 
     }
