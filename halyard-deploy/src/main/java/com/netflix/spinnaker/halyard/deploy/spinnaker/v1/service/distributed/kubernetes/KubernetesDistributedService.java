@@ -75,6 +75,7 @@ import io.fabric8.kubernetes.api.model.Volume;
 import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.extensions.ReplicaSet;
 import io.fabric8.kubernetes.api.model.extensions.ReplicaSetBuilder;
+import io.fabric8.kubernetes.api.model.LocalObjectReference;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.utils.Strings;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -121,6 +122,16 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
 
     KubernetesImageDescription image = new KubernetesImageDescription(artifactName, version, getDockerRegistry(deploymentName));
     return KubernetesUtil.getImageId(image);
+  }
+
+  default List<LocalObjectReference> getImagePullSecrets(ServiceSettings settings) {
+    List<LocalObjectReference> imagePullSecrets = new ArrayList<>();
+    if (settings.getKubernetes().getImagePullSecrets()!= null) {
+      for (String imagePullSecret : settings.getKubernetes().getImagePullSecrets()) {
+        imagePullSecrets.add(new LocalObjectReference(imagePullSecret));
+      }
+    }
+    return imagePullSecrets;
   }
 
   default Provider.ProviderType getProviderType() {
@@ -424,8 +435,6 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
 
   default void applyCustomSize(KubernetesContainerDescription container, DeploymentEnvironment deploymentEnvironment, String componentName, DeployKubernetesAtomicOperationDescription description) {
     Map componentSizing = deploymentEnvironment.getCustomSizing().get(componentName);
-//    Integer targetSize = (Integer) deploymentEnvironment.getCustomSizing().get(componentName).get("replicas");
-
     if (componentSizing != null) {
 
       if (componentSizing.get("requests") != null) {
@@ -436,7 +445,6 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
         container.setLimits(retrieveKubernetesResourceDescription(componentSizing, "limits"));
       }
 
-      //do something if replicas aren't specified, they should default to 1, but im not sure where that happens
       description.setTargetSize(retrieveKuberenetesTargetSize(componentSizing));
     }
 
@@ -524,12 +532,10 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
                   .build())
           .build();
     }).collect(Collectors.toList());
+
     ReplicaSetBuilder replicaSetBuilder = new ReplicaSetBuilder();
-
+    List<LocalObjectReference> imagePullSecrets = getImagePullSecrets(settings);
     Map componentSizing = deploymentEnvironment.getCustomSizing().get(serviceName);
-
-//    TODO grab the specfied replicas and add the to the .withReplicas part of ReplicaSet Builder
-    
     replicaSetBuilder = replicaSetBuilder
         .withNewMetadata()
         .withName(replicaSetName)
@@ -548,6 +554,7 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
         .withContainers(containers)
         .withTerminationGracePeriodSeconds(5L)
         .withVolumes(volumes)
+        .withImagePullSecrets(imagePullSecrets)
         .endSpec()
         .endTemplate()
         .endSpec();

@@ -153,6 +153,7 @@ deploymentConfigurations:
 
 
   }
+
   @Unroll("parses authn: #authnProvider:#propertyName value should be #propertyValue")
   void "parses all authn properties"() {
     setup:

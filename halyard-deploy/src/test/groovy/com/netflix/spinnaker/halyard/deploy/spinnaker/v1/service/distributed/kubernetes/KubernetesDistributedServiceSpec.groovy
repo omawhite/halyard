@@ -24,6 +24,8 @@ import com.netflix.spinnaker.halyard.config.model.v1.node.DeploymentEnvironment
 import com.netflix.spinnaker.halyard.deploy.deployment.v1.AccountDeploymentDetails
 import com.netflix.spinnaker.halyard.deploy.deployment.v1.DeploymentDetails
 import com.netflix.spinnaker.halyard.deploy.services.v1.ArtifactService
+import com.netflix.spinnaker.halyard.deploy.services.v1.GenerateService
+import com.netflix.spinnaker.halyard.deploy.spinnaker.v1.RunningServiceDetails
 import com.netflix.spinnaker.halyard.deploy.spinnaker.v1.SpinnakerArtifact
 import com.netflix.spinnaker.halyard.deploy.spinnaker.v1.SpinnakerRuntimeSettings
 import com.netflix.spinnaker.halyard.deploy.spinnaker.v1.service.ServiceInterfaceFactory
@@ -31,6 +33,7 @@ import com.netflix.spinnaker.halyard.deploy.spinnaker.v1.service.ServiceSettings
 import com.netflix.spinnaker.halyard.deploy.spinnaker.v1.service.SpinnakerMonitoringDaemonService
 import com.netflix.spinnaker.halyard.deploy.spinnaker.v1.service.SpinnakerService
 import com.netflix.spinnaker.halyard.deploy.spinnaker.v1.service.distributed.DistributedService
+import io.fabric8.kubernetes.api.model.LocalObjectReference
 import io.fabric8.kubernetes.api.model.extensions.ReplicaSetBuilder
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -56,13 +59,13 @@ class KubernetesDistributedServiceSpec extends Specification {
         container.limits?.cpu == limitsCpu
 
         where:
-        description         | requests                                | limits                                    | requestsMemory | requestsCpu | limitsMemory | limitsCpu
-        "all"               | new HashMap<>(memory: "1Mi", cpu: "1m") | new HashMap<>(memory: "50Mi", cpu: "50m") | "1Mi"          | "1m"        | "50Mi"       | "50m"
-        "only cpu"          | new HashMap<>(cpu: "1m")                | new HashMap<>(cpu: "50m")                 | null           | "1m"        | null         | "50m"
-        "only mem"          | new HashMap<>(memory: "1Mi")            | new HashMap<>(memory: "50Mi"            ) | "1Mi"          | null        | "50Mi"       | null
-        "only reqs"         | new HashMap<>(memory: "1Mi", cpu: "1m") | null                                      | "1Mi"          | "1m"        | null         | null
-        "only limits"       | null                                    | new HashMap<>(memory: "50Mi", cpu: "50m") | null           | null        | "50Mi"       | "50m"
-        "integer values"    | new HashMap<>(memory: 1, cpu: 2)        | new HashMap<>(memory: 3, cpu: 4)          | "1"            | "2"         | "3"          | "4"
+        description      | requests                                | limits                                    | requestsMemory | requestsCpu | limitsMemory | limitsCpu
+        "all"            | new HashMap<>(memory: "1Mi", cpu: "1m") | new HashMap<>(memory: "50Mi", cpu: "50m") | "1Mi"          | "1m"        | "50Mi"       | "50m"
+        "only cpu"       | new HashMap<>(cpu: "1m")                | new HashMap<>(cpu: "50m")                 | null           | "1m"        | null         | "50m"
+        "only mem"       | new HashMap<>(memory: "1Mi")            | new HashMap<>(memory: "50Mi")             | "1Mi"          | null        | "50Mi"       | null
+        "only reqs"      | new HashMap<>(memory: "1Mi", cpu: "1m") | null                                      | "1Mi"          | "1m"        | null         | null
+        "only limits"    | null                                    | new HashMap<>(memory: "50Mi", cpu: "50m") | null           | null        | "50Mi"       | "50m"
+        "integer values" | new HashMap<>(memory: 1, cpu: 2)        | new HashMap<>(memory: 3, cpu: 4)          | "1"            | "2"         | "3"          | "4"
     }
 
     def "adds no requests or limits when not specified"() {
@@ -115,10 +118,10 @@ class KubernetesDistributedServiceSpec extends Specification {
 
 
         where:
-        description                     | inputReplicas  | expectedReplicas
-        "replica amount not specified"  | null           | 1
-        "one replica specified"         | 1              | 1
-        "multiple replicas specified"   | 2              | 2
+        description                    | inputReplicas | expectedReplicas
+        "replica amount not specified" | null          | 1
+        "one replica specified"        | 1             | 1
+        "multiple replicas specified"  | 2             | 2
     }
 
     @Unroll
@@ -140,10 +143,41 @@ class KubernetesDistributedServiceSpec extends Specification {
         replicaSet.spec.replicas == expectedReplicas
 
         where:
-        description                     | inputReplicas  | expectedReplicas
-        "replica amount not specified"  | null           | 1
-        "one replica specified"         | 1              | 1
-        "multiple replicas specified"   | 2              | 2
+        description                    | inputReplicas | expectedReplicas
+        "replica amount not specified" | null          | 1
+        "one replica specified"        | 1             | 1
+        "multiple replicas specified"  | 2             | 2
+    }
+
+    def "imagePullSecret is set on a replicaset"() {
+        setup:
+        ServiceSettings serviceSettings = new ServiceSettings()
+        def kubernetesSettings = serviceSettings.kubernetes
+        def service = createServiceTestDouble()
+        ReplicaSetBuilder replicaSetBuilder = new ReplicaSetBuilder()
+
+        when:
+        kubernetesSettings.imagePullSecrets = pullSecrets
+        def imagePullSecrets = service.getImagePullSecrets(serviceSettings)
+        replicaSetBuilder = replicaSetBuilder
+            .withNewSpec()
+            .withNewTemplate()
+            .withNewSpec()
+            .withImagePullSecrets(imagePullSecrets)
+            .endSpec()
+            .endTemplate()
+            .endSpec()
+        def replicaSet = replicaSetBuilder.build()
+
+        then:
+        replicaSet.spec.template.spec.imagePullSecrets == compiledPullSecret
+
+        where:
+        description         | pullSecrets        | compiledPullSecret
+        "is null"           | null               | []
+        "is empty"          | []                 | []
+        "is one item"       | ["item"]           | [new LocalObjectReference("item")]
+        "is multiple items" | ["item1", "item2"] | [new LocalObjectReference("item1"), new LocalObjectReference("item2")]
     }
 
     private KubernetesDistributedService createServiceTestDouble() {
@@ -178,6 +212,16 @@ class KubernetesDistributedServiceSpec extends Specification {
             }
 
             @Override
+            RunningServiceDetails getRunningServiceDetails(AccountDeploymentDetails details, SpinnakerRuntimeSettings runtimeSettings) {
+                return null
+            }
+
+            @Override
+            void ensureRunning(AccountDeploymentDetails details, GenerateService.ResolvedConfiguration resolvedConfiguration, List list, boolean recreate) {
+
+            }
+
+            @Override
             String getServiceName() {
                 return null
             }
@@ -185,6 +229,16 @@ class KubernetesDistributedServiceSpec extends Specification {
             @Override
             SpinnakerMonitoringDaemonService getMonitoringDaemonService() {
                 return null
+            }
+
+            @Override
+            String connectCommand(AccountDeploymentDetails details, SpinnakerRuntimeSettings runtimeSettings) {
+                return null
+            }
+
+            @Override
+            void deleteVersion(AccountDeploymentDetails details, ServiceSettings settings, Integer version) {
+
             }
 
             @Override
