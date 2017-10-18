@@ -17,12 +17,10 @@
 
 package com.netflix.spinnaker.halyard.deploy.spinnaker.v1.service.distributed.kubernetes;
 
-import com.amazonaws.services.dynamodbv2.xspec.M;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.frigga.Names;
 import com.netflix.spinnaker.clouddriver.kubernetes.deploy.KubernetesUtil;
-import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.KubernetesAtomicOperationDescription;
 import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.loadbalancer.KubernetesLoadBalancerDescription;
 import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.loadbalancer.KubernetesNamedServicePort;
 import com.netflix.spinnaker.clouddriver.kubernetes.deploy.description.servergroup.DeployKubernetesAtomicOperationDescription;
@@ -445,7 +443,9 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
         container.setLimits(retrieveKubernetesResourceDescription(componentSizing, "limits"));
       }
 
-      description.setTargetSize(retrieveKuberenetesTargetSize(componentSizing));
+      if (componentSizing.get("replicas") != null) {
+        description.setTargetSize(retrieveKubernetesTargetSize(componentSizing));
+      }
     }
 
     /* TODO(lwander) this needs work
@@ -460,8 +460,11 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
     return requests;
   }
 
-  default Integer retrieveKuberenetesTargetSize(Map componentSizing){
-    return componentSizing.get("replicas") != null ? (Integer) componentSizing.get("replicas") : 1;
+  // Set replica size based on custom settings
+  // Default is 1 if not set
+  default Integer retrieveKubernetesTargetSize(Map componentSizing){
+    return (componentSizing != null && componentSizing.get("replicas") != null) ?
+        (Integer) componentSizing.get("replicas") : 1;
   }
 
   default void ensureRunning(
@@ -542,7 +545,7 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
         .withNamespace(namespace)
         .endMetadata()
         .withNewSpec()
-        .withReplicas(retrieveKuberenetesTargetSize(componentSizing))
+        .withReplicas(retrieveKubernetesTargetSize(componentSizing))
         .withNewSelector()
         .withMatchLabels(replicaSetSelector)
         .endSelector()
