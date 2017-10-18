@@ -437,9 +437,7 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
       }
 
       //do something if replicas aren't specified, they should default to 1, but im not sure where that happens
-      if (componentSizing.get("replicas") !=null) {
-        description.setTargetSize(retrieveKuberenetesTargetSize(componentSizing));
-      }
+      description.setTargetSize(retrieveKuberenetesTargetSize(componentSizing));
     }
 
     /* TODO(lwander) this needs work
@@ -455,9 +453,7 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
   }
 
   default Integer retrieveKuberenetesTargetSize(Map componentSizing){
-    Integer targetSize;
-    targetSize = (Integer) componentSizing.get("replicas");
-    return targetSize;
+    return componentSizing.get("replicas") != null ? (Integer) componentSizing.get("replicas") : 1;
   }
 
   default void ensureRunning(
@@ -530,6 +526,8 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
     }).collect(Collectors.toList());
     ReplicaSetBuilder replicaSetBuilder = new ReplicaSetBuilder();
 
+    Map componentSizing = deploymentEnvironment.getCustomSizing().get(serviceName);
+
 //    TODO grab the specfied replicas and add the to the .withReplicas part of ReplicaSet Builder
     
     replicaSetBuilder = replicaSetBuilder
@@ -538,7 +536,7 @@ public interface KubernetesDistributedService<T> extends DistributedService<T, K
         .withNamespace(namespace)
         .endMetadata()
         .withNewSpec()
-        .withReplicas(2)
+        .withReplicas(retrieveKuberenetesTargetSize(componentSizing))
         .withNewSelector()
         .withMatchLabels(replicaSetSelector)
         .endSelector()

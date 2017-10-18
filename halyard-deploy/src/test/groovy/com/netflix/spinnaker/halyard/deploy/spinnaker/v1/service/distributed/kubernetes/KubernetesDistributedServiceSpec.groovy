@@ -31,6 +31,7 @@ import com.netflix.spinnaker.halyard.deploy.spinnaker.v1.service.ServiceSettings
 import com.netflix.spinnaker.halyard.deploy.spinnaker.v1.service.SpinnakerMonitoringDaemonService
 import com.netflix.spinnaker.halyard.deploy.spinnaker.v1.service.SpinnakerService
 import com.netflix.spinnaker.halyard.deploy.spinnaker.v1.service.distributed.DistributedService
+import io.fabric8.kubernetes.api.model.extensions.ReplicaSetBuilder
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -98,27 +99,51 @@ class KubernetesDistributedServiceSpec extends Specification {
     }
 
     @Unroll
-    def "applies replicaset sizes specified in customSizing"() {
+    def "applies replicaset sizes on 'orca-driven' deploy"() {
         setup:
         KubernetesContainerDescription container = new KubernetesContainerDescription()
         def service = createServiceTestDouble()
         def deploymentEnvironment = new DeploymentEnvironment()
         def kubernetesDescription = new DeployKubernetesAtomicOperationDescription()
-        deploymentEnvironment.customSizing['echo'] = new HashMap<>('replicas': replicas)
+        deploymentEnvironment.customSizing['echo'] = new HashMap<>('replicas': inputReplicas)
 
         when:
         service.applyCustomSize(container, deploymentEnvironment, "echo", kubernetesDescription)
 
         then:
-        kubernetesDescription.getTargetSize() == replicas
+        kubernetesDescription.getTargetSize() == expectedReplicas
 
 
         where:
-        description                     |  replicas
-        "replica ammount not specfied"  |  1
-        "one replica specfied"          |  2
-        "multiple replicas specfied"    |  3
+        description                     | inputReplicas  | expectedReplicas
+        "replica amount not specified"  | null           | 1
+        "one replica specified"         | 1              | 1
+        "multiple replicas specified"   | 2              | 2
+    }
 
+    @Unroll
+    def "applies replicaset sizes on 'manual' deploy"() {
+        setup:
+        def service = createServiceTestDouble()
+        ReplicaSetBuilder replicaSetBuilder = new ReplicaSetBuilder()
+        def deploymentEnvironment = new DeploymentEnvironment()
+        def componentSizing = deploymentEnvironment.customSizing['echo'] = new HashMap<>('replicas': inputReplicas)
+
+        when:
+        replicaSetBuilder = replicaSetBuilder
+            .withNewSpec()
+            .withReplicas(service.retrieveKuberenetesTargetSize(componentSizing))
+            .endSpec()
+        def replicaSet = replicaSetBuilder.build()
+
+        then:
+        replicaSet.spec.replicas == expectedReplicas
+
+        where:
+        description                     | inputReplicas  | expectedReplicas
+        "replica amount not specified"  | null           | 1
+        "one replica specified"         | 1              | 1
+        "multiple replicas specified"   | 2              | 2
     }
 
     private KubernetesDistributedService createServiceTestDouble() {
